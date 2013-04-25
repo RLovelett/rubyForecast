@@ -1,6 +1,8 @@
 # RubyForecast
 
-TODO: Write a gem description
+An attempt to faithfully reproduce the entire conkyForecast command-line
+utility for Ruby. Using the Yahoo Weather API (or another API if
+needed).
 
 ## Installation
 
@@ -19,6 +21,11 @@ Or install it yourself as:
 ## Usage
 
 TODO: Write usage instructions here
+
+## Weather Icons
+
+[Google Now Weather
+Icons](http://www.screenlicious.com/portfolio-item/google-now-weather/)
 
 ## Contributing
 
