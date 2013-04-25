@@ -1,3 +1,156 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 
-require 'rubyForecast'
+# Load the RubyForecast core library
+require File.expand_path('../../lib/rubyForecast', __FILE__)
+
+config_desc = 'The path to the configuration file, allow multiple config files to be used.'
+location_desc = 'Location code for weather data [default set in config]. Use the following url to determine your location code by city name: http://weather.yahoo.com'
+datatype_desc = 'The data type options are: DW (Day of Week), WF (Weather Font output), WI (Weather Icon Path), LT (Forecast:Low Temp,Current:Feels Like Temp), HT (Forecast:High Temp,Current:Current Temp), CC (Current Conditions), CT (Conditions Text), PC (Precipitation Chance), HM (Humidity), VI (Visibility), WD (Wind Direction), WA (Wind Angle - in degrees), WS (Wind Speed), WG (Wind Gusts), BF (Bearing Font), BI (Bearing Icon Path), BS (Bearing font with Speed), CN (City Name), CO (Country), OB (Observatory), SR (SunRise), SS (SunSet), DL (DayLight), MP (Moon Phase), MF (Moon Font), MI (Moon Icon Path), BR (Barometer Reading), BD (Barometer Description), UI (UV Index), UT (UV Text), DP (Dew Point), WM (weather map fetch and image path returned),  LU (Last Update at weather.com), LF (Last Fetch from weather.com). Not applicable at command line when using templates.'
+startday_desc = 'Define the starting day number, if omitted current conditions are output. Not applicable at command line when using templates.'
+endday_desc = 'Define the ending day number, if omitted only starting day data is output. Not applicable at command line when using templates.'
+spaces_desc = 'Define the number of spaces between ranged output. Not applicable at command line when using templates.'
+template_desc = 'Define a template file to generate output in one call. A displayable item in the file is in the form [--datatype=HT --startday=1]. The following are possible options within each item: --location,--datatype,--startday,--endday,--night,--shortweekday,--imperial,--beaufort,--metrespersecond,--hideunits,--hidedegreesymbol,--spaces,--minuteshide. Note that the short forms of the options are not supported! If any of these options is set from the commandline, it sets the default value of the option for all template items.'
+imperial_desc = 'Request imperial units, if ommitted output is in metric.'
+
+opts = Trollop::options do
+  version "rubyForecast #{RubyForecast::VERSION} (c) Ryan Lovelett"
+  banner <<-EOS
+Usage: rubyForecast [options]
+
+Options:
+EOS
+
+  opt :config, config_desc, type: String, default: '~/.rubyForecast.config'
+  opt :location, location_desc, type: Integer
+  opt :datatype, datatype_desc, type: String, default: 'HT'
+  opt :startday, startday_desc, type: Integer
+  opt :endday, endday_desc, type: Integer
+  opt :spaces, spaces_desc, type: Integer, default: 1
+  opt :template, template_desc, type: String
+  opt :imperial, imperial_desc
+end
+
+client = if opts[:imperial]
+           Weatherman::Client.new :unit => 'F'
+         else
+           Weatherman::Client.new
+         end
+response = client.lookup_by_woeid opts[:location]
+
+temperature_units = response.units['temperature']
+distance_units = response.units['distance']
+pressure_units = response.units['pressure']
+speed_units = response.units['speed']
+
+case opts[:datatype]
+# DW (Day of Week)
+when 'DW'
+  date = response.condition['date']
+  puts date.strftime('%a')
+# WF (Weather Font output)
+when 'WF'
+# WI (Weather Icon Path)
+when 'WI'
+  code = response.condition['code']
+  puts File.expand_path(File.join(RubyForecast::ICONS_PATH, "#{code}.png"))
+# LT (Forecast:Low Temp,Current:Feels Like Temp)
+when 'LT'
+  puts "#{response.condition['temp']}°#{temperature_units}"
+# HT (Forecast:High Temp,Current:Current Temp)
+when 'HT'
+  puts "#{response.condition['temp']}°#{temperature_units}"
+# CC (Current Conditions)
+when 'CC'
+  puts "#{response.condition['temp']}°#{temperature_units}"
+# CT (Conditions Text)
+when 'CT'
+  puts response.condition['text']
+# TODO PC (Precipitation Chance)
+when 'PC'
+  puts 'Not implemented'
+# HM (Humidity)
+when 'HM'
+  puts "#{response.atmosphere['humidity']}%"
+# VI (Visibility)
+when 'VI'
+  puts "#{response.atmosphere['visibility']}#{distance_units}"
+# WD (Wind Direction)
+# TODO conkyWeather outputs something like N, NW, W, NE, E, SW, S, SE
+when 'WD'
+  puts "#{response.wind['direction']}"
+# WA (Wind Angle - in degrees)
+when 'WA'
+  puts "#{response.wind['direction']}"
+# WS (Wind Speed)
+when 'WS'
+  puts "#{response.wind['speed']}#{speed_units}"
+# TODO WG (Wind Gusts)
+# TODO BF (Bearing Font)
+# TODO BI (Bearing Icon Path)
+# TODO BS (Bearing font with Speed)
+# CN (City Name)
+when 'CN'
+  puts "#{response.location['city']}, #{response.location['region']}"
+# CO (Country)
+when 'CO'
+  puts response.location['country']
+# TODO OB (Observatory)
+# SR (SunRise)
+# SS (SunSet)
+# DL (DayLight)
+# MP (Moon Phase)
+# MF (Moon Font)
+# MI (Moon Icon Path)
+# BR (Barometer Reading)
+# BD (Barometer Description)
+# UI (UV Index)
+# UT (UV Text)
+# DP (Dew Point)
+# WM (weather map fetch and image path returned)
+# LU (Last Update at weather.com)
+# LF (Last Fetch from weather.com)
+end
+
+#  -L LOCALE, --locale=LOCALE
+#                        override the system locale for language output
+#                        (bg=bulgarian, cs=czech, de=german, es=spanish,
+#                        en=english, es=spanish, fj=fijian, fr=french,
+#                        it=italian, nl=dutch, pl=polish, ro=romanian,
+#                        sk=slovak, more to come)
+#  -i, --imperial        request imperial units, if omitted output is in
+#                        metric.
+#  -b, --beaufort        request beaufort scale for wind speeds, if omitted
+#                        output is either metric/imperial.
+#  -M, --metrespersecond
+#                        request metres per second for wind speeds, if omitted
+#                        output is either metric/imperial.
+#  -n, --night           switch output to night data, if omitted day output
+#                        will be output.
+#  -w, --shortweekday    Shorten the day of week data type to 3 characters.
+#  -u, --hideunits       Hide units such as mph or C, degree symbols (°) are
+#                        still shown.
+#  -x, --hidedegreesymbol
+#                        Hide the degree symbol used with temperature output,
+#                        this is only valid if used in conjunction with
+#                        --hideunits.
+#  -m NUMBER, --minuteshide=NUMBER
+#                        Works only with LU and LF. If present, hides the date
+#                        part of the LU or LF timestamp if the day of the
+#                        timestamp is today. The time part is also hidden, if
+#                        the timestamp is older than minutes specified in this
+#                        argument. If set to 0, the time part is always shown.
+#                        If set to -1, the value EXPIRY_MINUTES from the config
+#                        file is used.
+#  -c WIDTH, --centeredwidth=WIDTH
+#                        If used the output will be centered in a string of the
+#                        set width, padded out with spaces, if the output width
+#                        is greater than the setting it will be truncated
+#  -r, --refetch         Fetch data regardless of data expiry.
+#  -v, --verbose         Request verbose output, not a good idea when running
+#                        through conky!
+#  -V, --version         Displays the version of the script.
+#  --errorlogfile=FILE   If a filepath is set, the script appends errors to the
+#                        filepath.
+#  --infologfile=FILE    If a filepath is set, the script appends info to the
+#                        filepath.
